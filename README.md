@@ -12,6 +12,16 @@ posts with it needs extra permissions from Meta. The script calls the [Threads S
 on Apify, which reads what Threads shows a logged-out visitor and returns plain JSON. Disclosure: I
 build and maintain that Actor. It is pay per post (prices below), and every run has a spending cap.
 
+## Choose an example
+
+| Task | Start here |
+|---|---|
+| Search a keyword and export posts | [Set up Python](#setup), then [keyword search](#search-posts-by-keyword) |
+| Enrich a known list of accounts | [Profile-only example](#profiles) — followers, bio and links without collecting profile posts |
+| Integrate with your application | [Python and HTTP examples](#calling-it-from-your-own-code) |
+| Check inputs or run in the browser | [Live Actor and input form](https://apify.com/sauliusautomatesit/threads-search-api/input-schema) |
+| Understand charges and coverage | [Pricing](#what-it-costs) and [limitations](#notes) |
+
 ## Setup
 
 ```bash
@@ -51,6 +61,10 @@ python threads_search.py "your brand" "competitor one" "competitor two" --max 10
 ```
 
 ## Profiles
+
+Use this when you already know the accounts and need their public followers, biography and links.
+The script sets `maxPostsPerProfile: 0`, so this mode retrieves profile rows without also collecting
+and charging for the accounts' latest posts.
 
 ```bash
 python threads_search.py --profiles mosseri --out profiles.csv
@@ -93,9 +107,11 @@ replies included. The full input is on the
 
 ## What it costs
 
-Prices on 27 Oct 2026: **$2 per 1,000 posts** ($0.002 each) and the same per profile on Apify's free
-plan, 5% to 15% less on paid plans, plus $0.00005 per run. 100 posts cost $0.20. Apify's free plan
-includes $5 of usage a month.
+Prices checked 31 Oct 2026: **$2 per 1,000 posts** ($0.002 each) and the same per profile on Apify's
+free plan, 5% to 15% less on paid plans. Actor start is **$0.00005 per GB of run memory**, with a
+minimum of one start event. 100 posts have $0.20 in result charges, plus the start charge. A
+profile-only run charges for profile rows and its start, not profile posts. The script's
+`--max-spend` option defaults to a $1 cap per run.
 
 ## Notes
 
