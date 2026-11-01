@@ -63,10 +63,15 @@ python threads_search.py "your brand" "competitor one" "competitor two" --max 10
 
 ## Search phrases that Threads would otherwise return empty
 
-Logged-out Threads search sometimes returns no posts for a multi-word phrase even when the same
-words appear in relevant posts. The Actor now handles this automatically: if the exact phrase is
-empty, it tries other word orders and then searches the content words separately, keeping only
-posts whose text contains every content word.
+Logged-out Threads search sometimes returns no posts for a phrase even when its topic words
+appear in relevant posts. When an exact search returns no posts, the Actor automatically tries
+other word orders for two- or three-word phrases, then searches up to four topic words separately.
+Those word searches keep posts that match every topic word, allowing some English and Russian
+word endings. Words such as `for` and `with` are skipped; when other topic words remain, request
+words such as `looking`, `recommend`, `ищу` and `посоветуйте` are not required in the post.
+
+If a word has no results as typed, the Actor also tries base forms, such as `стоматолога` to
+`стоматолог` or `dentists` to `dentist`. Base-form fallback also applies to single-word searches.
 
 ```bash
 python threads_search.py "coffee shop for sale" --max 50 --out opportunities.csv
@@ -74,7 +79,7 @@ python threads_search.py "coffee shop for sale" --max 50 --out opportunities.csv
 
 The CSV keeps the original phrase in `searchQuery`, so several phrases can still be grouped and
 compared consistently. When you call the Actor directly, fallback rows also include `matchedBy`
-(`wordOrder` or `allWords`) and `fallbackQuery`, which show how the post was found. Set
+(`wordOrder`, `allWords` or `baseForm`) and `fallbackQuery`, which show how the post was found. Set
 `exactPhraseOnly: true` in direct Actor input if you need only Threads' exact phrase response.
 
 This fallback improves useful coverage; it does not turn logged-out Threads search into a complete
