@@ -17,6 +17,7 @@ build and maintain that Actor. It is pay per post (prices below), and every run 
 | Task | Start here |
 |---|---|
 | Search a keyword and export posts | [Set up Python](#setup), then [keyword search](#search-posts-by-keyword) |
+| Search a phrase that Threads returns empty | [Phrase fallback](#search-phrases-that-threads-would-otherwise-return-empty) |
 | Enrich a known list of accounts | [Profile-only example](#profiles) — followers, bio and links without collecting profile posts |
 | Integrate with your application | [Python and HTTP examples](#calling-it-from-your-own-code) |
 | Check inputs or run in the browser | [Live Actor and input form](https://apify.com/sauliusautomatesit/threads-search-api/input-schema) |
@@ -59,6 +60,26 @@ Several keywords in one run, 100 posts each:
 ```bash
 python threads_search.py "your brand" "competitor one" "competitor two" --max 100
 ```
+
+## Search phrases that Threads would otherwise return empty
+
+Logged-out Threads search sometimes returns no posts for a multi-word phrase even when the same
+words appear in relevant posts. The Actor now handles this automatically: if the exact phrase is
+empty, it tries other word orders and then searches the content words separately, keeping only
+posts whose text contains every content word.
+
+```bash
+python threads_search.py "coffee shop for sale" --max 50 --out opportunities.csv
+```
+
+The CSV keeps the original phrase in `searchQuery`, so several phrases can still be grouped and
+compared consistently. When you call the Actor directly, fallback rows also include `matchedBy`
+(`wordOrder` or `allWords`) and `fallbackQuery`, which show how the post was found. Set
+`exactPhraseOnly: true` in direct Actor input if you need only Threads' exact phrase response.
+
+This fallback improves useful coverage; it does not turn logged-out Threads search into a complete
+archive. Some phrases still return no posts, and the normal per-keyword limit and spending cap
+continue to apply.
 
 ## Profiles
 
