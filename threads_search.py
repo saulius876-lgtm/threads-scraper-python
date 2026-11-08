@@ -6,6 +6,8 @@
 import argparse
 import csv
 import os
+from pathlib import Path
+import tempfile
 import sys
 
 from apify_client import ApifyClient
@@ -43,30 +45,52 @@ def main():
     if run is None or run.status != "SUCCEEDED":
         sys.exit(f"Run did not succeed: {run.status if run else 'not found'}")
 
+    rows = list(client.dataset(run.default_dataset_id).iterate_items())
+    return export_results(rows, args.keywords, args.profiles, args.out)
+
+
+def export_results(rows, keywords, requested_profiles, output):
+    """Export completed downloads, including headers for requested empty modes."""
     posts, profiles, problems = [], [], []
-    for item in client.dataset(run.default_dataset_id).iterate_items():
+    for item in rows:
         {"post": posts, "profile": profiles}.get(item.get("type"), problems).append(item)
     posts.sort(key=lambda p: p.get("likes") or 0, reverse=True)
-
-    if posts:
-        write_csv(args.out, POST_COLUMNS, posts)
-        print(f"{len(posts)} posts saved to {args.out}")
-    if profiles:
-        out = args.out if not posts else args.out.replace(".csv", "") + "-profiles.csv"
-        for p in profiles:
-            p["bioLinks"] = " ".join(p.get("bioLinks") or [])
-        write_csv(out, PROFILE_COLUMNS, profiles)
-        print(f"{len(profiles)} profiles saved to {out}")
-    for p in problems:
-        print(f"no result for {p.get('input') or p.get('searchQuery') or p.get('username')}: {p.get('error')}")
+    export_posts = bool(keywords or posts)
+    export_profiles = bool(requested_profiles or profiles)
+    output = Path(output)
+    if export_posts:
+        write_csv(output, POST_COLUMNS, posts)
+        print(f"{len(posts)} posts saved to {output}")
+    if export_profiles:
+        profile_output = output.with_name(output.stem + "-profiles.csv") if export_posts else output
+        profile_rows = [{**profile, "bioLinks": " ".join(profile.get("bioLinks") or [])}
+                        for profile in profiles]
+        write_csv(profile_output, PROFILE_COLUMNS, profile_rows)
+        print(f"{len(profiles)} profiles saved to {profile_output}")
+    for problem in problems:
+        print(f"no result for {problem.get('input') or problem.get('searchQuery') or problem.get('username')}: {problem.get('error')}", file=sys.stderr)
+    if problems:
+        print("Export contains input errors or unrecognized rows; inspect the messages above. Empty files are not a confirmed no-match result.", file=sys.stderr)
+        return 2
+    if not posts and not profiles:
+        print("No posts or profiles returned; requested CSVs contain headers only.")
+    return 0
 
 
 def write_csv(path, columns, rows):
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=columns, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(rows)
+    # Replace each file only after it has been fully written. Mixed exports are not one transaction.
+    path = Path(path)
+    fd, temporary = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", newline="", encoding="utf-8") as stream:
+            writer = csv.DictWriter(stream, fieldnames=columns, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(rows)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

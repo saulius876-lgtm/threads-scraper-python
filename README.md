@@ -102,6 +102,23 @@ python threads_search.py --profiles mosseri --out profiles.csv
 
 With keywords and `--profiles` together, profiles go to a second file, `threads-profiles.csv`.
 
+## Empty results and export errors
+
+A successful run with no rows writes a header-only CSV for each requested mode, replacing any
+previous export at that path. Keyword-only and profile-only requests use `--out`. Mixed requests
+always put posts in `--out` and profiles in the sibling `<output-stem>-profiles.csv`, even when
+one mode returns no rows. Use separate output paths for monitors whose history you want to keep.
+
+Exit code 0 means the export completed without error rows. Exit code 2 means the dataset contained
+input errors or unrecognized rows: valid rows are exported, but read the error messages before
+treating an empty CSV as a no-match result. A failed Actor run or interrupted download does not
+replace the CSVs. Other exceptions stop the command with a nonzero exit code.
+
+Each CSV is replaced only after that file is fully written. The two files of a mixed export are
+replaced separately; if either write fails, the pair is not a confirmed complete export. Check
+the exit code before consuming it. Empty results do not prove that no relevant posts exist:
+logged-out Threads coverage remains limited.
+
 ## Calling it from your own code
 
 ```python
